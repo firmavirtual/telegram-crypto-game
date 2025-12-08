@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crypto Mini Game - Earn & Win</title>
+  <meta name="description" content="Join our crypto mini game, complete missions, earn points, and qualify for the airdrop!">
+  
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loader">
+      <div class="crypto-icon">
+        <i class="fas fa-coins"></i>
+      </div>
+      <div class="loading-text">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" class="app" style="display: none;">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="user-info">
+          <div class="avatar">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <div class="user-details">
+            <div class="username" id="username">Loading...</div>
+            <div class="rank" id="rank">Rank: -</div>
+          </div>
+        </div>
+        <div class="points-display">
+          <i class="fas fa-star"></i>
+          <span id="points">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="home">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+      </button>
+      <button class="nav-tab" data-tab="missions">
+        <i class="fas fa-tasks"></i>
+        <span>Missions</span>
+      </button>
+      <button class="nav-tab" data-tab="leaderboard">
+        <i class="fas fa-trophy"></i>
+        <span>Leaderboard</span>
+      </button>
+      <button class="nav-tab" data-tab="profile">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+      </button>
+    </nav>
+
+    <!-- Content Container -->
+    <main class="content">
+      <!-- Home Tab -->
+      <div id="home-tab" class="tab-content active">
+        <div class="welcome-card">
+          <h1 class="welcome-title">Welcome to Crypto Game! 🚀</h1>
+          <p class="welcome-subtitle">Complete missions, earn points, and win rewards!</p>
+        </div>
+
+        <!-- Daily Check-in -->
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-calendar-check"></i> Daily Check-in</h2>
+          </div>
+          <div class="card-body">
+            <p>Check in daily to earn 50 points!</p>
+            <button id="checkin-btn" class="btn btn-primary">
+              <i class="fas fa-check-circle"></i> Check In Now
+            </button>
+            <div id="checkin-message" class="message"></div>
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-star"></i>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-points">0</div>
+              <div class="stat-label">Total Points</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-referrals">0</div>
+              <div class="stat-label">Referrals</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-trophy"></i>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-rank">-</div>
+              <div class="stat-label">Your Rank</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Airdrop Eligibility -->
+        <div class="card airdrop-card">
+          <div class="card-header">
+            <h2><i class="fas fa-parachute-box"></i> Airdrop Eligibility</h2>
+          </div>
+          <div class="card-body">
+            <div id="airdrop-status" class="airdrop-status">
+              <div class="eligibility-item">
+                <span class="eligibility-label">
+                  <i class="fas fa-star"></i> Minimum Points (1000)
+                </span>
+                <span class="eligibility-status" id="points-status">
+                  <i class="fas fa-times"></i>
+                </span>
+              </div>
+              <div class="eligibility-item">
+                <span class="eligibility-label">
+                  <i class="fas fa-users"></i> Minimum Referrals (3)
+                </span>
+                <span class="eligibility-status" id="referrals-status">
+                  <i class="fas fa-times"></i>
+                </span>
+              </div>
+              <div class="eligibility-item">
+                <span class="eligibility-label">
+                  <i class="fas fa-wallet"></i> Wallet Connected
+                </span>
+                <span class="eligibility-status" id="wallet-status">
+                  <i class="fas fa-times"></i>
+                </span>
+              </div>
+              <div class="eligibility-item">
+                <span class="eligibility-label">
+                  <i class="fas fa-share-alt"></i> Social Links (3+)
+                </span>
+                <span class="eligibility-status" id="social-status">
+                  <i class="fas fa-times"></i>
+                </span>
+              </div>
+            </div>
+            <div id="airdrop-result" class="airdrop-result"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Missions Tab -->
+      <div id="missions-tab" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-tasks"></i> Available Missions</h2>
+          </div>
+          <div class="card-body">
+            <div id="missions-list" class="missions-list">
+              <!-- Missions will be loaded here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leaderboard Tab -->
+      <div id="leaderboard-tab" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-trophy"></i> Top Players</h2>
+          </div>
+          <div class="card-body">
+            <div id="leaderboard-list" class="leaderboard-list">
+              <!-- Leaderboard will be loaded here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Tab -->
+      <div id="profile-tab" class="tab-content">
+        <!-- Wallet Section -->
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-wallet"></i> Wallet Address</h2>
+          </div>
+          <div class="card-body">
+            <div id="wallet-display" class="wallet-display">
+              <input type="text" id="wallet-input" class="input" placeholder="Enter your wallet address">
+              <button id="save-wallet-btn" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Wallet
+              </button>
+            </div>
+            <div id="wallet-message" class="message"></div>
+          </div>
+        </div>
+
+        <!-- Social Links Section -->
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-share-alt"></i> Social Media Links</h2>
+          </div>
+          <div class="card-body">
+            <div id="social-links" class="social-links">
+              <!-- Social links will be loaded here -->
+            </div>
+            <div class="add-social">
+              <select id="social-platform" class="input">
+                <option value="">Select Platform</option>
+                <option value="twitter">X (Twitter)</option>
+                <option value="instagram">Instagram</option>
+                <option value="tiktok">TikTok</option>
+                <option value="youtube">YouTube</option>
+                <option value="facebook">Facebook</option>
+              </select>
+              <input type="text" id="social-username" class="input" placeholder="Your username">
+              <button id="add-social-btn" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add
+              </button>
+            </div>
+            <div id="social-message" class="message"></div>
+          </div>
+        </div>
+
+        <!-- Referral Section -->
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-gift"></i> Referral Program</h2>
+          </div>
+          <div class="card-body">
+            <p>Invite friends and earn 100 points for each referral!</p>
+            <div class="referral-code">
+              <input type="text" id="referral-link" class="input" readonly>
+              <button id="copy-referral-btn" class="btn btn-secondary">
+                <i class="fas fa-copy"></i> Copy
+              </button>
+            </div>
+            <div class="referral-stats">
+              <p>Total Referrals: <strong id="total-referrals">0</strong></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Mission Modal -->
+  <div id="mission-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Mission Details</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="modal-description"></p>
+        <div id="modal-proof" class="proof-section" style="display: none;">
+          <label for="proof-input">Proof URL (screenshot link, post link, etc.):</label>
+          <input type="text" id="proof-input" class="input" placeholder="https://...">
+        </div>
+        <div class="modal-reward">
+          <i class="fas fa-star"></i>
+          <span id="modal-reward">0</span> Points
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="submit-mission-btn" class="btn btn-primary">
+          <i class="fas fa-check"></i> Complete Mission
+        </button>
+      </div>
+      <div id="modal-message" class="message"></div>
+    </div>
+  </div>
+
+  <!-- Custom JS -->
+  <script src="/js/app.js"></script>
+</body>
+</html>

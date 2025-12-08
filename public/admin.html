@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Crypto Mini Game</title>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-bg: #0f172a;
+            --card-bg: #1e293b;
+            --card-hover: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary-color);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .card h2 {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .input,
+        .textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            font-family: inherit;
+            margin-bottom: 1rem;
+        }
+
+        .textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: rgba(99, 102, 241, 0.1);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: var(--card-hover);
+        }
+
+        .login-container {
+            max-width: 400px;
+            margin: 10rem auto;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .message.success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 600;
+            position: relative;
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen">
+        <div class="login-container">
+            <h2 style="text-align: center; margin-bottom: 2rem;">Admin Login</h2>
+            <div id="login-message" class="message hidden"></div>
+            <input type="text" id="admin-username" class="input" placeholder="Username">
+            <input type="password" id="admin-password" class="input" placeholder="Password">
+            <button id="login-btn" class="btn btn-primary" style="width: 100%;">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </button>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="admin-panel" class="hidden">
+        <div class="container">
+            <div class="header">
+                <h1><i class="fas fa-shield-alt"></i> Admin Panel</h1>
+                <p>Manage your Crypto Mini Game</p>
+                <button id="logout-btn" class="btn btn-danger" style="margin-top: 1rem;">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Users</div>
+                    <div class="stat-value" id="stat-users">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">New Today</div>
+                    <div class="stat-value" id="stat-new">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Points</div>
+                    <div class="stat-value" id="stat-points">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Referrals</div>
+                    <div class="stat-value" id="stat-referrals">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Eligible Users</div>
+                    <div class="stat-value" id="stat-eligible">0</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" data-tab="users">Users</button>
+                <button class="tab" data-tab="missions">Missions</button>
+                <button class="tab" data-tab="pending">Pending Reviews</button>
+                <button class="tab" data-tab="broadcast">Broadcast</button>
+                <button class="tab" data-tab="export">Export</button>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="users-tab" class="tab-content active">
+                <div class="card">
+                    <h2>Users Management</h2>
+                    <input type="text" id="search-users" class="input" placeholder="Search users...">
+                    <div id="users-table"></div>
+                </div>
+            </div>
+
+            <!-- Missions Tab -->
+            <div id="missions-tab" class="tab-content">
+                <div class="card">
+                    <h2>Missions Management</h2>
+                    <button id="add-mission-btn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Mission
+                    </button>
+                    <div id="missions-table"></div>
+                </div>
+            </div>
+
+            <!-- Pending Reviews Tab -->
+            <div id="pending-tab" class="tab-content">
+                <div class="card">
+                    <h2>Pending Mission Reviews</h2>
+                    <div id="pending-table"></div>
+                </div>
+            </div>
+
+            <!-- Broadcast Tab -->
+            <div id="broadcast-tab" class="tab-content">
+                <div class="card">
+                    <h2>Broadcast Message</h2>
+                    <div id="broadcast-message" class="message hidden"></div>
+                    <textarea id="broadcast-text" class="textarea" placeholder="Enter your message..."></textarea>
+                    <select id="broadcast-target" class="input">
+                        <option value="all">All Users</option>
+                        <option value="selected">Selected Users</option>
+                    </select>
+                    <button id="send-broadcast-btn" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Send Broadcast
+                    </button>
+                </div>
+            </div>
+
+            <!-- Export Tab -->
+            <div id="export-tab" class="tab-content">
+                <div class="card">
+                    <h2>Export Data</h2>
+                    <p>Export user data including wallet addresses, points, referrals, and social links.</p>
+                    <button id="export-users-btn" class="btn btn-success">
+                        <i class="fas fa-download"></i> Export Users CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isLoggedIn = false;
+
+        $(document).ready(function () {
+            checkAdminStatus();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            $('#login-btn').on('click', handleLogin);
+            $('#logout-btn').on('click', handleLogout);
+            $('.tab').on('click', function () {
+                const tab = $(this).data('tab');
+                switchTab(tab);
+            });
+            $('#send-broadcast-btn').on('click', handleBroadcast);
+            $('#export-users-btn').on('click', handleExport);
+            $('#search-users').on('input', debounce(loadUsers, 500));
+        }
+
+        async function checkAdminStatus() {
+            try {
+                const response = await $.get('/admin/status');
+                if (response.isAdmin) {
+                    showAdminPanel();
+                }
+            } catch (error) {
+                console.log('Not logged in');
+            }
+        }
+
+        async function handleLogin() {
+            const username = $('#admin-username').val();
+            const password = $('#admin-password').val();
+            const $message = $('#login-message');
+
+            try {
+                await $.ajax({
+                    url: '/admin/login',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ username, password })
+                });
+
+                showAdminPanel();
+            } catch (error) {
+                $message.removeClass('hidden success').addClass('error')
+                    .text('Invalid credentials').show();
+            }
+        }
+
+        async function handleLogout() {
+            await $.post('/admin/logout');
+            location.reload();
+        }
+
+        function showAdminPanel() {
+            $('#login-screen').addClass('hidden');
+            $('#admin-panel').removeClass('hidden');
+            loadStats();
+            loadUsers();
+        }
+
+        function switchTab(tab) {
+            $('.tab').removeClass('active');
+            $(`.tab[data-tab="${tab}"]`).addClass('active');
+            $('.tab-content').removeClass('active');
+            $(`#${tab}-tab`).addClass('active');
+
+            if (tab === 'missions') loadMissions();
+            if (tab === 'pending') loadPending();
+        }
+
+        async function loadStats() {
+            try {
+                const response = await $.get('/admin/stats');
+                const stats = response.stats;
+                $('#stat-users').text(stats.totalUsers);
+                $('#stat-new').text(stats.newUsersToday);
+                $('#stat-points').text(stats.totalPoints);
+                $('#stat-referrals').text(stats.totalReferrals);
+                $('#stat-eligible').text(stats.eligibleUsers);
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadUsers() {
+            const search = $('#search-users').val();
+            try {
+                const response = await $.get(`/admin/users?search=${search}`);
+                displayUsers(response.users);
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        function displayUsers(users) {
+            const container = $('#users-table');
+            if (users.length === 0) {
+                container.html('<p>No users found.</p>');
+                return;
+            }
+
+            let html = '<table><thead><tr><th>ID</th><th>Username</th><th>Points</th><th>Wallet</th><th>Joined</th><th>Actions</th></tr></thead><tbody>';
+
+            users.forEach(user => {
+                html += `
+          <tr>
+            <td>${user.telegram_id}</td>
+            <td>${user.username || user.first_name}</td>
+            <td>${user.points}</td>
+            <td>${user.wallet_address || 'N/A'}</td>
+            <td>${new Date(user.created_at).toLocaleDateString()}</td>
+            <td>
+              <button class="btn ${user.is_banned ? 'btn-success' : 'btn-danger'}" onclick="toggleBan(${user.id}, ${user.is_banned})">
+                ${user.is_banned ? 'Unban' : 'Ban'}
+              </button>
+            </td>
+          </tr>
+        `;
+            });
+
+            html += '</tbody></table>';
+            container.html(html);
+        }
+
+        window.toggleBan = async function (userId, isBanned) {
+            try {
+                await $.ajax({
+                    url: `/admin/users/${userId}/ban`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ banned: !isBanned })
+                });
+                loadUsers();
+            } catch (error) {
+                alert('Error updating user status');
+            }
+        };
+
+        async function loadMissions() {
+            try {
+                const response = await $.get('/admin/missions');
+                displayMissions(response.missions);
+            } catch (error) {
+                console.error('Error loading missions:', error);
+            }
+        }
+
+        function displayMissions(missions) {
+            const container = $('#missions-table');
+            let html = '<table><thead><tr><th>Title</th><th>Points</th><th>Type</th><th>Frequency</th><th>Status</th></tr></thead><tbody>';
+
+            missions.forEach(mission => {
+                html += `
+          <tr>
+            <td>${mission.title}</td>
+            <td>${mission.points_reward}</td>
+            <td>${mission.mission_type}</td>
+            <td>${mission.frequency}</td>
+            <td>${mission.is_active ? 'Active' : 'Inactive'}</td>
+          </tr>
+        `;
+            });
+
+            html += '</tbody></table>';
+            container.html(html);
+        }
+
+        async function loadPending() {
+            try {
+                const response = await $.get('/admin/missions/pending');
+                displayPending(response.submissions);
+            } catch (error) {
+                console.error('Error loading pending:', error);
+            }
+        }
+
+        function displayPending(submissions) {
+            const container = $('#pending-table');
+            if (submissions.length === 0) {
+                container.html('<p>No pending submissions.</p>');
+                return;
+            }
+
+            let html = '<table><thead><tr><th>User</th><th>Mission</th><th>Proof</th><th>Points</th><th>Actions</th></tr></thead><tbody>';
+
+            submissions.forEach(sub => {
+                html += `
+          <tr>
+            <td>${sub.username || sub.first_name}</td>
+            <td>${sub.title}</td>
+            <td><a href="${sub.proof_url}" target="_blank">View</a></td>
+            <td>${sub.points_reward}</td>
+            <td>
+              <button class="btn btn-success" onclick="reviewSubmission(${sub.id}, true)">Approve</button>
+              <button class="btn btn-danger" onclick="reviewSubmission(${sub.id}, false)">Reject</button>
+            </td>
+          </tr>
+        `;
+            });
+
+            html += '</tbody></table>';
+            container.html(html);
+        }
+
+        window.reviewSubmission = async function (id, approved) {
+            try {
+                await $.ajax({
+                    url: `/admin/missions/submissions/${id}/review`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ approved })
+                });
+                loadPending();
+            } catch (error) {
+                alert('Error reviewing submission');
+            }
+        };
+
+        async function handleBroadcast() {
+            const message = $('#broadcast-text').val();
+            const target = $('#broadcast-target').val();
+            const $message = $('#broadcast-message');
+
+            if (!message) {
+                $message.removeClass('hidden success').addClass('error').text('Please enter a message');
+                return;
+            }
+
+            try {
+                const response = await $.ajax({
+                    url: '/admin/broadcast',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ message, targetType: target })
+                });
+
+                $message.removeClass('hidden error').addClass('success').text(response.message);
+                $('#broadcast-text').val('');
+            } catch (error) {
+                $message.removeClass('hidden success').addClass('error').text('Error sending broadcast');
+            }
+        }
+
+        function handleExport() {
+            window.location.href = '/admin/export/users';
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function () {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, arguments), wait);
+            };
+        }
+    </script>
+</body>
+
+</html>
