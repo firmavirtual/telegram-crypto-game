@@ -7,6 +7,19 @@ const webAppUrl = process.env.WEBAPP_URL || 'http://localhost:3000';
 
 const bot = new TelegramBot(token, { polling: true });
 
+// Error handling for polling
+bot.on('polling_error', (error) => {
+    console.log('Polling error:', error.code);
+    if (error.code === 'ETELEGRAM' && error.message.includes('409 Conflict')) {
+        console.log('⚠️ Another bot instance is running. Stopping polling...');
+        bot.stopPolling();
+    }
+});
+
+bot.on('error', (error) => {
+    console.log('Bot error:', error);
+});
+
 // Start command
 bot.onText(/\/start(.*)/, async (msg, match) => {
     const chatId = msg.chat.id;

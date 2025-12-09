@@ -19,11 +19,12 @@ async function isSpamming(telegramId, actionType) {
             [telegramId, actionType, fiveMinutesAgo],
             (err, result) => {
                 if (err) {
-                    reject(err);
+                    console.error('Error checking spam:', err);
+                    resolve(false); // On error, don't block the user
                     return;
                 }
                 // Allow max 5 actions of same type in 5 minutes
-                resolve(result.count >= 5);
+                resolve(result && result.count >= 5);
             }
         );
     });
@@ -33,8 +34,15 @@ async function isSpamming(telegramId, actionType) {
 async function logActivity(telegramId, actionType) {
     return new Promise((resolve, reject) => {
         db.get('SELECT id FROM users WHERE telegram_id = ?', [telegramId], (err, user) => {
-            if (err || !user) {
-                reject(err);
+            if (err) {
+                console.error('Error in logActivity:', err);
+                resolve(); // Resolve instead of reject to prevent crash
+                return;
+            }
+
+            if (!user) {
+                // User doesn't exist yet, just resolve
+                resolve();
                 return;
             }
 
@@ -42,8 +50,12 @@ async function logActivity(telegramId, actionType) {
                 'INSERT INTO activity_log (user_id, action_type) VALUES (?, ?)',
                 [user.id, actionType],
                 (err) => {
-                    if (err) reject(err);
-                    else resolve();
+                    if (err) {
+                        console.error('Error logging activity:', err);
+                        resolve(); // Resolve instead of reject
+                    } else {
+                        resolve();
+                    }
                 }
             );
         });
