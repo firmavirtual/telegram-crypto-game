@@ -1,137 +1,133 @@
 const TelegramBot = require('node-telegram-bot-api');
 const db = require('./database');
-const { generateReferralCode, isSpamming, logActivity } = require('./utils/helpers');
 
 const token = process.env.BOT_TOKEN;
 const webAppUrl = process.env.WEBAPP_URL || 'http://localhost:3000';
 
-// Global error handlers to prevent crashes
+// Create bot instance
+let bot;
+try {
+    bot = new TelegramBot(token, { polling: true });
+    console.log('Bot initialized successfully');
+} catch (error) {
+    console.error('Error initializing bot:', error);
+    process.exit(1);
+}
+
+// Global error handlers
 process.on('unhandledRejection', (reason, promise) => {
-    console.log('Unhandled Rejection at:', promise, 'reason:', reason);
-    // Don't crash the application
+    console.log('Unhandled Rejection:', reason);
 });
 
 process.on('uncaughtException', (error) => {
     console.log('Uncaught Exception:', error);
-    // Don't crash the application
 });
 
-const bot = new TelegramBot(token, { polling: true });
-
-// Error handling for polling
+// Bot error handlers
 bot.on('polling_error', (error) => {
-    console.log('Polling error:', error.code);
-    if (error.code === 'ETELEGRAM' && error.message.includes('409 Conflict')) {
-        console.log('⚠️ Another bot instance is running. Stopping polling...');
-        bot.stopPolling();
-    }
+    console.log('Polling error:', error.code, error.message);
 });
 
 bot.on('error', (error) => {
     console.log('Bot error:', error);
 });
 
-// Start command
-bot.onText(/\/start(.*)/, async (msg, match) => {
-    try {
-        const chatId = msg.chat.id;
-        const telegramId = msg.from.id.toString();
-        const username = msg.from.username || '';
-        const firstName = msg.from.first_name || '';
-        const lastName = msg.from.last_name || '';
-        const referralCode = match[1].trim();
+// Generate random referral code
+function generateReferralCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
 
-        // Anti-spam check
-        if (await isSpamming(telegramId, 'start')) {
-            bot.sendMessage(chatId, '⚠️ Please wait a moment before trying again.');
+// Start command
+bot.onText(/\/start(.*)/, (msg, match) => {
+    const chatId = msg.chat.id;
+    const telegramId = msg.from.id.toString();
+    const username = msg.from.username || '';
+    const firstName = msg.from.first_name || '';
+    const lastName = msg.from.last_name || '';
+    const referralCode = match[1] ? match[1].trim() : '';
+
+    console.log(`/start command from ${telegramId}`);
+
+    // Check if user exists
+    db.get('SELECT * FROM users WHERE telegram_id = ?', [telegramId], (err, user) => {
+        if (err) {
+            console.error('Database error:', err);
+            bot.sendMessage(chatId, '❌ Error. Please try again.');
             return;
         }
 
-        await logActivity(telegramId, 'start');
+        if (!user) {
+            // Create new user
+            const newReferralCode = generateReferralCode();
 
-        // Check if user exists
-        db.get('SELECT * FROM users WHERE telegram_id = ?', [telegramId], async (err, user) => {
-            if (err) {
-                console.error(err);
-                return;
-            }
-
-            if (!user) {
-                // Create new user
-                const newReferralCode = generateReferralCode();
-
-                db.run(
-                    `INSERT INTO users (telegram_id, username, first_name, last_name, referral_code, referred_by) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
-                    [telegramId, username, firstName, lastName, newReferralCode, referralCode || null],
-                    function (err) {
-                        if (err) {
-                            console.error(err);
-                            return;
-                        }
-
-                        // If referred by someone, add referral record
-                        if (referralCode) {
-                            db.get('SELECT id FROM users WHERE referral_code = ?', [referralCode], (err, referrer) => {
-                                if (referrer) {
-                                    db.run(
-                                        'INSERT INTO referrals (referrer_id, referred_id, points_earned) VALUES (?, ?, ?)',
-                                        [referrer.id, this.lastID, 100]
-                                    );
-                                    // Award points to referrer
-                                    db.run('UPDATE users SET points = points + 100 WHERE id = ?', [referrer.id]);
-                                }
-                            });
-                        }
-
-                        sendWelcomeMessage(chatId, firstName, newReferralCode);
+            db.run(
+                `INSERT INTO users (telegram_id, username, first_name, last_name, referral_code, referred_by) 
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [telegramId, username, firstName, lastName, newReferralCode, referralCode || null],
+                function (err) {
+                    if (err) {
+                        console.error('Error creating user:', err);
+                        bot.sendMessage(chatId, '❌ Error creating account. Please try again.');
+                        return;
                     }
-                );
-            } else {
-                // Update last active
-                db.run('UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE telegram_id = ?', [telegramId]);
-                sendWelcomeMessage(chatId, firstName, user.referral_code);
-            }
-        });
-    } catch (error) {
-        console.error('Error in /start command:', error);
-    }
+
+                    console.log(`New user created: ${telegramId}`);
+
+                    // If referred by someone
+                    if (referralCode) {
+                        db.get('SELECT id FROM users WHERE referral_code = ?', [referralCode], (err, referrer) => {
+                            if (!err && referrer) {
+                                const newUserId = this.lastID;
+                                db.run(
+                                    'INSERT INTO referrals (referrer_id, referred_id, points_earned) VALUES (?, ?, ?)',
+                                    [referrer.id, newUserId, 100]
+                                );
+                                db.run('UPDATE users SET points = points + 100 WHERE id = ?', [referrer.id]);
+                                console.log(`Referral bonus awarded to user ${referrer.id}`);
+                            }
+                        });
+                    }
+
+                    sendWelcomeMessage(chatId, firstName, newReferralCode);
+                }
+            );
+        } else {
+            // Update last active
+            db.run('UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE telegram_id = ?', [telegramId]);
+            sendWelcomeMessage(chatId, firstName, user.referral_code);
+        }
+    });
 });
 
 // Help command
 bot.onText(/\/help/, (msg) => {
     const chatId = msg.chat.id;
     const helpText = `
-🎮 *Welcome to Crypto Mini Game!*
+🎮 *Crypto Mini Game Bot*
 
-*Available Commands:*
+*Commands:*
 /start - Start the game
-/play - Open the mini game
+/play - Open mini game
 /profile - View your profile
-/missions - View available missions
-/leaderboard - View top players
-/referral - Get your referral link
-/wallet - Set your wallet address
-/help - Show this help message
+/help - Show this message
 
 *How to Play:*
-1. Complete daily and weekly missions
-2. Earn points and climb the leaderboard
-3. Invite friends using your referral link
-4. Link your social media accounts
-5. Qualify for the airdrop!
+• Complete missions
+• Earn points
+• Invite friends
+• Qualify for airdrop
 
 Good luck! 🚀
-  `;
+    `;
 
     bot.sendMessage(chatId, helpText, { parse_mode: 'Markdown' });
 });
 
-// Play command - opens the mini game
+// Play command
 bot.onText(/\/play/, (msg) => {
     const chatId = msg.chat.id;
 
-    bot.sendMessage(chatId, '🎮 Click the button below to open the game!', {
+    bot.sendMessage(chatId, '🎮 Click the button below to play!', {
         reply_markup: {
             inline_keyboard: [[
                 { text: '🚀 Play Game', web_app: { url: webAppUrl } }
@@ -151,7 +147,6 @@ bot.onText(/\/profile/, (msg) => {
             return;
         }
 
-        // Get referral count
         db.get('SELECT COUNT(*) as count FROM referrals WHERE referrer_id = ?', [user.id], (err, result) => {
             const referralCount = result ? result.count : 0;
 
@@ -162,11 +157,10 @@ bot.onText(/\/profile/, (msg) => {
 💰 Points: ${user.points}
 👥 Referrals: ${referralCount}
 💳 Wallet: ${user.wallet_address || 'Not set'}
-🔗 Referral Code: \`${user.referral_code}\`
+🔗 Code: \`${user.referral_code}\`
 
-Use /wallet to set your wallet address
-Use /referral to get your referral link
-      `;
+Use /play to open the game!
+            `;
 
             bot.sendMessage(chatId, profileText, { parse_mode: 'Markdown' });
         });
@@ -179,107 +173,36 @@ bot.onText(/\/wallet (.+)/, (msg, match) => {
     const telegramId = msg.from.id.toString();
     const walletAddress = match[1].trim();
 
-    // Basic validation (you can add more sophisticated validation)
     if (walletAddress.length < 20) {
-        bot.sendMessage(chatId, '❌ Invalid wallet address. Please provide a valid address.');
+        bot.sendMessage(chatId, '❌ Invalid wallet address.');
         return;
     }
 
     db.run('UPDATE users SET wallet_address = ? WHERE telegram_id = ?', [walletAddress, telegramId], (err) => {
         if (err) {
-            bot.sendMessage(chatId, '❌ Error updating wallet address.');
+            bot.sendMessage(chatId, '❌ Error updating wallet.');
             return;
         }
-
-        bot.sendMessage(chatId, '✅ Wallet address updated successfully!');
+        bot.sendMessage(chatId, '✅ Wallet updated successfully!');
     });
 });
 
-// Referral command
-bot.onText(/\/referral/, (msg) => {
-    const chatId = msg.chat.id;
-    const telegramId = msg.from.id.toString();
-
-    db.get('SELECT referral_code FROM users WHERE telegram_id = ?', [telegramId], (err, user) => {
-        if (err || !user) {
-            bot.sendMessage(chatId, '❌ User not found. Please use /start first.');
-            return;
-        }
-
-        const botUsername = bot.options.username || 'YourBotUsername';
-        const referralLink = `https://t.me/${botUsername}?start=${user.referral_code}`;
-
-        const referralText = `
-🎁 *Your Referral Link*
-
-Share this link with your friends:
-${referralLink}
-
-Earn 100 points for each friend who joins!
-    `;
-
-        bot.sendMessage(chatId, referralText, { parse_mode: 'Markdown' });
-    });
-});
-
-// Leaderboard command
-bot.onText(/\/leaderboard/, (msg) => {
-    const chatId = msg.chat.id;
-
-    db.all(
-        `SELECT u.username, u.first_name, u.points 
-     FROM users u 
-     WHERE u.is_banned = 0 
-     ORDER BY u.points DESC 
-     LIMIT 10`,
-        [],
-        (err, rows) => {
-            if (err) {
-                bot.sendMessage(chatId, '❌ Error fetching leaderboard.');
-                return;
-            }
-
-            let leaderboardText = '🏆 *Top 10 Players*\n\n';
-
-            rows.forEach((row, index) => {
-                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-                const name = row.username ? `@${row.username}` : row.first_name;
-                leaderboardText += `${medal} ${name} - ${row.points} points\n`;
-            });
-
-            bot.sendMessage(chatId, leaderboardText, { parse_mode: 'Markdown' });
-        }
-    );
-});
-
-// Missions command
-bot.onText(/\/missions/, (msg) => {
-    const chatId = msg.chat.id;
-
-    bot.sendMessage(chatId, '📋 Click the button below to view and complete missions!', {
-        reply_markup: {
-            inline_keyboard: [[
-                { text: '📋 View Missions', web_app: { url: `${webAppUrl}#missions` } }
-            ]]
-        }
-    });
-});
-
+// Send welcome message
 function sendWelcomeMessage(chatId, firstName, referralCode) {
     const welcomeText = `
 🎉 *Welcome ${firstName}!*
 
-You've successfully joined our Crypto Mini Game!
+You've joined the Crypto Mini Game!
 
-🎮 Complete missions to earn points
-🏆 Climb the leaderboard
-👥 Invite friends and earn rewards
-💰 Qualify for the airdrop
+🎮 Complete missions
+🏆 Earn points
+👥 Invite friends
+💰 Qualify for airdrop
 
 Your referral code: \`${referralCode}\`
 
-Click the button below to start playing!
-  `;
+Click below to start playing!
+    `;
 
     bot.sendMessage(chatId, welcomeText, {
         parse_mode: 'Markdown',
@@ -291,5 +214,6 @@ Click the button below to start playing!
     });
 }
 
-// Export bot for use in other modules
+console.log('Bot is running...');
+
 module.exports = bot;
