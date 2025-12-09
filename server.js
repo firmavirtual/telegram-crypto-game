@@ -8,7 +8,8 @@ const cron = require('node-cron');
 
 const db = require('./database');
 const bot = require('./bot');
-const { updateLeaderboard, checkAirdropEligibility, sendDailyReminders, announceWeeklyWinners } = require('./utils/scheduler');
+// Temporarily disabled to prevent errors
+// const { updateLeaderboard, checkAirdropEligibility, sendDailyReminders, announceWeeklyWinners} = require('./utils/scheduler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,7 +40,10 @@ app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// Scheduled tasks
+// Scheduled tasks - TEMPORARILY DISABLED
+// These will be re-enabled once the scheduler issues are fixed
+
+/*
 // Update leaderboard every hour
 cron.schedule('0 * * * *', () => {
     console.log('Updating leaderboard...');
@@ -47,9 +51,9 @@ cron.schedule('0 * * * *', () => {
 });
 
 // Check airdrop eligibility every 6 hours
-cron.schedule('0 */6 * * *', () => {
-    console.log('Checking airdrop eligibility...');
-    checkAirdropEligibility();
+cron.schedule('0 */6 * * * ', () => {
+console.log('Checking airdrop eligibility...');
+checkAirdropEligibility();
 });
 
 // Send daily reminders at 10 AM
@@ -63,6 +67,7 @@ cron.schedule('0 12 * * 1', () => {
     console.log('Announcing weekly winners...');
     announceWeeklyWinners();
 });
+*/
 
 // Error handling
 app.use((err, req, res, next) => {
