@@ -5,6 +5,17 @@ const { generateReferralCode, isSpamming, logActivity } = require('./utils/helpe
 const token = process.env.BOT_TOKEN;
 const webAppUrl = process.env.WEBAPP_URL || 'http://localhost:3000';
 
+// Global error handlers to prevent crashes
+process.on('unhandledRejection', (reason, promise) => {
+    console.log('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Don't crash the application
+});
+
+process.on('uncaughtException', (error) => {
+    console.log('Uncaught Exception:', error);
+    // Don't crash the application
+});
+
 const bot = new TelegramBot(token, { polling: true });
 
 // Error handling for polling
@@ -22,65 +33,69 @@ bot.on('error', (error) => {
 
 // Start command
 bot.onText(/\/start(.*)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const telegramId = msg.from.id.toString();
-    const username = msg.from.username || '';
-    const firstName = msg.from.first_name || '';
-    const lastName = msg.from.last_name || '';
-    const referralCode = match[1].trim();
+    try {
+        const chatId = msg.chat.id;
+        const telegramId = msg.from.id.toString();
+        const username = msg.from.username || '';
+        const firstName = msg.from.first_name || '';
+        const lastName = msg.from.last_name || '';
+        const referralCode = match[1].trim();
 
-    // Anti-spam check
-    if (await isSpamming(telegramId, 'start')) {
-        bot.sendMessage(chatId, '⚠️ Please wait a moment before trying again.');
-        return;
-    }
-
-    await logActivity(telegramId, 'start');
-
-    // Check if user exists
-    db.get('SELECT * FROM users WHERE telegram_id = ?', [telegramId], async (err, user) => {
-        if (err) {
-            console.error(err);
+        // Anti-spam check
+        if (await isSpamming(telegramId, 'start')) {
+            bot.sendMessage(chatId, '⚠️ Please wait a moment before trying again.');
             return;
         }
 
-        if (!user) {
-            // Create new user
-            const newReferralCode = generateReferralCode();
+        await logActivity(telegramId, 'start');
 
-            db.run(
-                `INSERT INTO users (telegram_id, username, first_name, last_name, referral_code, referred_by) 
+        // Check if user exists
+        db.get('SELECT * FROM users WHERE telegram_id = ?', [telegramId], async (err, user) => {
+            if (err) {
+                console.error(err);
+                return;
+            }
+
+            if (!user) {
+                // Create new user
+                const newReferralCode = generateReferralCode();
+
+                db.run(
+                    `INSERT INTO users (telegram_id, username, first_name, last_name, referral_code, referred_by) 
          VALUES (?, ?, ?, ?, ?, ?)`,
-                [telegramId, username, firstName, lastName, newReferralCode, referralCode || null],
-                function (err) {
-                    if (err) {
-                        console.error(err);
-                        return;
-                    }
+                    [telegramId, username, firstName, lastName, newReferralCode, referralCode || null],
+                    function (err) {
+                        if (err) {
+                            console.error(err);
+                            return;
+                        }
 
-                    // If referred by someone, add referral record
-                    if (referralCode) {
-                        db.get('SELECT id FROM users WHERE referral_code = ?', [referralCode], (err, referrer) => {
-                            if (referrer) {
-                                db.run(
-                                    'INSERT INTO referrals (referrer_id, referred_id, points_earned) VALUES (?, ?, ?)',
-                                    [referrer.id, this.lastID, 100]
-                                );
-                                // Award points to referrer
-                                db.run('UPDATE users SET points = points + 100 WHERE id = ?', [referrer.id]);
-                            }
-                        });
-                    }
+                        // If referred by someone, add referral record
+                        if (referralCode) {
+                            db.get('SELECT id FROM users WHERE referral_code = ?', [referralCode], (err, referrer) => {
+                                if (referrer) {
+                                    db.run(
+                                        'INSERT INTO referrals (referrer_id, referred_id, points_earned) VALUES (?, ?, ?)',
+                                        [referrer.id, this.lastID, 100]
+                                    );
+                                    // Award points to referrer
+                                    db.run('UPDATE users SET points = points + 100 WHERE id = ?', [referrer.id]);
+                                }
+                            });
+                        }
 
-                    sendWelcomeMessage(chatId, firstName, newReferralCode);
-                }
-            );
-        } else {
-            // Update last active
-            db.run('UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE telegram_id = ?', [telegramId]);
-            sendWelcomeMessage(chatId, firstName, user.referral_code);
-        }
-    });
+                        sendWelcomeMessage(chatId, firstName, newReferralCode);
+                    }
+                );
+            } else {
+                // Update last active
+                db.run('UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE telegram_id = ?', [telegramId]);
+                sendWelcomeMessage(chatId, firstName, user.referral_code);
+            }
+        });
+    } catch (error) {
+        console.error('Error in /start command:', error);
+    }
 });
 
 // Help command
